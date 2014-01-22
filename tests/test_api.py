@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 import pytest, zerorpc, json
 from bson import json_util
 
