@@ -11,6 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 from sqlalchemy.types import BLOB
 
+
 from bs4 import BeautifulSoup, Doctype, Comment
 from Crypto import Random
 from Crypto.Cipher import AES

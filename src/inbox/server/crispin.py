@@ -336,8 +336,6 @@ class YahooCrispinClient(CrispinClient):
         if self._folder_names is None:
             folders = self._fetch_folder_list(c)
             self._folder_names = [name for flags, delimiter, name in folders]
-
-        print "SELF._FOLDER_NAMES = ", self._folder_names
         return self._folder_names
 
     def uids(self, uids, c):
