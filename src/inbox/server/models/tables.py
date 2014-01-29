@@ -55,6 +55,9 @@ def decrypt_aes(ciphertext, key):
     plaintext = unpad(cipher.decrypt(ciphertext))[AES.block_size:]
     return plaintext
 
+#TODO: Change this, d'uh
+secret = 12345678
+
 # global
 class ImapAccount(Base):
     # user_id refers to Inbox's user id
@@ -99,6 +102,7 @@ class ImapAccount(Base):
     # Password stuff
     password_aes = deferred(Column(BLOB(256)))
     key = deferred(Column(BLOB(128)))
+
 
     # If oauthed or password
     is_oauthed = Column(Boolean, default=True)

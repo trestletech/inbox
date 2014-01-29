@@ -99,7 +99,7 @@ class IMAPConnectionPool(ConnectionPool):
             # Reads from db, therefore shouldn't get here
             else:
                 raise
-
+        
         return conn
 
     def _keepalive(self, c):
