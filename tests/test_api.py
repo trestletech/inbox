@@ -3,7 +3,7 @@ from bson import json_util
 
 from .base import TestDB
 
-# TODO: Get from config
+# TODO[kavya]: Get from config
 API_SERVER_LOC = 'tcp://0.0.0.0:9999'
 USER_ID = 1
 NAMESPACE_ID = 1

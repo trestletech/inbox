@@ -28,11 +28,11 @@ class TestDB(object):
         # Note: Since database is called test, all users have access to it;
         # don't need to read in the username + password from config.
 
-        # TODO: Don't hardcode, get from config
+        # TODO[kavya]: Don't hardcode, get from config
         database = 'test'
         source = TEST_DATA
 
-        # TODO: Don't hardcode, use database + source vars
+        # TODO[kavya]: Don't hardcode, use database + source vars
         cmd = 'mysql test < /vagrant/tests/dump.sql'
         subprocess.call(cmd, shell=True)
 

@@ -128,7 +128,7 @@ class API(object):
     @namespace_auth
     @jsonify
     def body_for_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
+        # TODO[kavya]: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).join(Message.parts) \
@@ -163,7 +163,7 @@ class API(object):
     # Mailing list API:
     @namespace_auth
     def is_mailing_list_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
+        # TODO[kavya]: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
@@ -173,7 +173,7 @@ class API(object):
     @namespace_auth
     @jsonify
     def mailing_list_info_for_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
+        # TODO[kavya]: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
@@ -183,7 +183,7 @@ class API(object):
     @namespace_auth
     @jsonify
     def headers_for_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
+        # TODO[kavya]: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
