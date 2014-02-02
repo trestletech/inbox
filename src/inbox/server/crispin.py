@@ -94,6 +94,9 @@ class CrispinClientBase(object):
             must provide a callback that checks UID validity.
         """
         select_info = self._do_select_folder(folder, c)
+
+        print "SELECT_INFO = ", select_info
+
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
@@ -252,6 +255,8 @@ class CrispinClient(CrispinClientBase):
         if self.cache:
             self.set_cache(status, folder, 'status')
 
+        print "status = ", status
+
         return status
 
     def _fetch_all_uids(self, c):
@@ -331,6 +336,8 @@ class YahooCrispinClient(CrispinClient):
         if self._folder_names is None:
             folders = self._fetch_folder_list(c)
             self._folder_names = [name for flags, delimiter, name in folders]
+
+        print "SELF._FOLDER_NAMES = ", self._folder_names
         return self._folder_names
 
     def uids(self, uids, c):

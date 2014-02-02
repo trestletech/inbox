@@ -159,12 +159,15 @@ class ImapFolderSyncMonitor(Greenlet):
                         imapaccount_id=self.crispin_client.account_id,
                         folder_name=self.folder_name).one()
             except NoResultFound:
+                print "NRF CASE"
                 foldersync = FolderSync(
                         imapaccount_id=self.crispin_client.account_id,
                         folder_name=self.folder_name)
                 db_session.add(foldersync)
                 db_session.commit()
             self.state = foldersync.state
+
+            print "SELF.STATE = ", self.state
             # NOTE: The parent ImapSyncMonitor handler could kill us at any
             # time if it receives a shutdown command. The shutdown command is
             # equivalent to ctrl-c.
@@ -338,7 +341,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
-            shared_state['status_cb'], shared_state['syncmanager_lock'], ### TODO[kavya]:CHECK SYNCMANAGER LOCK!
+            shared_state['status_cb'], shared_state['syncmanager_lock'], # TODO[kavya]:CHECK SYNCMANAGER LOCK!
             download_and_commit_uids, account.create_message, c)
 
 def check_flags(crispin_client, db_session, folder_name, local_uids, c):

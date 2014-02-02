@@ -46,6 +46,7 @@ def get_session(db_session, session_token):
 # TODO[kavya]: Auth's error handling
 def auth_account(email_address):
     provider = provider_from_address(email_address)
+    print "provider = ", provider
 
     if (provider == 'Gmail'):
         response = oauth.oauth(email_address)
