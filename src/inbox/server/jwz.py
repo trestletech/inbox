@@ -53,4 +53,4 @@ print "items = ", items
 print "\n\n"
 for subj, container in items:
 	print "subj = ", subj
-	jwzthreading.print_container(container, debug=1)
+	jwzthreading.print_container(container, debug=0)
