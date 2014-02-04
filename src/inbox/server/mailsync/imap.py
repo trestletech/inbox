@@ -328,6 +328,17 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
     check_flags(crispin_client, db_session, folder_name, local_uids, c)
 
+    account_id = crispin_client.account_id
+    saved_validity = account.get_uidvalidity(account_id, db_session, folder_name)
+
+    print "SAVED_VALIDITY = ", saved_validity
+    if saved_validity is None:
+        account.update_uidvalidity(account_id, db_session, folder_name,
+                    crispin_client.selected_uidvalidity,
+                    crispin_client.selected_highestmodseq)
+        db_session.commit()
+    print "POST UPDATE SAVED_VALIDITY = ", saved_validity
+
     remote_uids = crispin_client.all_uids(c)
     log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
         folder_name))
@@ -370,7 +381,10 @@ def chunked_uid_download(crispin_client, db_session, log,
                 .format(folder_name, chunk_size))
         # we prioritize message download by reverse-UID order, which
         # generally puts more recent messages first
-        for uids in chunk(reversed(uids), chunk_size):
+
+        print "UIDS = ", uids
+
+        for uids in chunk(sorted(uids, reverse=True), chunk_size):
             num_local_messages += download_commit_fn(crispin_client,
                     db_session, log, folder_name, uids, msg_create_fn,
                     syncmanager_lock, c)

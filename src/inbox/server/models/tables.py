@@ -3,7 +3,7 @@ import json
 
 from itertools import chain
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, BigInteger
 from sqlalchemy import ForeignKey, Text, Index, func, event
 from sqlalchemy.orm import reconstructor, relationship, backref, deferred
 from sqlalchemy.schema import UniqueConstraint
@@ -559,7 +559,7 @@ class UIDValidity(JSONSerializable, Base):
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
     uid_validity = Column(Integer, nullable=False)
-    highestmodseq = Column(Integer, nullable=False)
+    highestmodseq = Column(BigInteger, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 

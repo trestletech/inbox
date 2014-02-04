@@ -70,10 +70,12 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     unknown_uids = set(remote_uids).difference(set(local_uids))
 
     if folder_name != crispin_client.folder_names(c)['All']:
+        print "GONNA CHUNKED_THREAD_DWNLD"
         chunked_thread_download(crispin_client, db_session, log, folder_name,
                 remote_g_metadata, unknown_uids, shared_state['status_cb'],
                 shared_state['syncmanager_lock'], c)
     else:
+        print "GONNA CHUNKED_UID_DWNLD"
         full_download = deduplicate_message_download(crispin_client,
                 db_session, log, remote_g_metadata, unknown_uids, c)
         chunked_uid_download(crispin_client, db_session, log, folder_name,
