@@ -19,6 +19,8 @@ from inbox.util.addr import parse_email_address
 from inbox.util.file import mkdirp
 from inbox.util.misc import parse_ml_headers
 
+from inbox.server.jwzmessage import JWZ_Message
+
 from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
 
 from ..config import config
@@ -301,3 +303,19 @@ def create_gmail_message(db_session, log, account, folder_name, uid,
     if new_uid:
         return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
                 x_gm_thrid, x_gm_msgid, x_gm_labels)
+
+def create_yahoo_message(db_session, log, account, folder_name, uid,
+    internaldate, flags, body):
+    new_uid = create_message(db_session, log, account, folder_name, uid,
+            internaldate, flags, body)
+    if new_uid:
+        new_uid.message.jwz_repr = JWZ_Message(body)
+
+        # NOTE: This code _requires_ autoflush=True, otherwise duplicate
+        # threads may attempt to be created and crash.
+        thread = new_uid.message.thread = Thread.from_message_yahoo(db_session,
+            new_uid.imapaccount.namespace, new_uid.message)
+
+        # TODO[kavya]: Check labels and shit a la Gmail
+
+        return new_uid

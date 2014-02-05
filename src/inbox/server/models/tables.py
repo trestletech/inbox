@@ -55,9 +55,6 @@ def decrypt_aes(ciphertext, key):
     plaintext = unpad(cipher.decrypt(ciphertext))[AES.block_size:]
     return plaintext
 
-#TODO: Change this, d'uh
-secret = 12345678
-
 # global
 class ImapAccount(Base):
     # user_id refers to Inbox's user id
@@ -103,7 +100,6 @@ class ImapAccount(Base):
     password_aes = deferred(Column(BLOB(256)))
     key = deferred(Column(BLOB(128)))
 
-
     # If oauthed or password
     is_oauthed = Column(Boolean, default=True)
 
@@ -140,7 +136,7 @@ class ImapAccount(Base):
         self.key = key[:len(key)/2]
         keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
         with open(keyfile, 'w+') as f:
-            f.write(key[len(key)/2:])
+            f.write(key[len(key)/2:])    
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
@@ -276,6 +272,10 @@ class Message(JSONSerializable, Base, HasRevisions):
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
     g_thrid = Column(String(40), nullable=True)
+
+    # Only on messages from Yahoo
+    # TODO[kavya]: CHECK Column type!
+    jwz_repr = deferred(Column(BLOB()))
 
     @property
     def namespace(self):
@@ -616,6 +616,22 @@ class Thread(JSONSerializable, Base):
             pass
         except MultipleResultsFound:
             log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
+            raise
+        thread = cls(subject=message.subject, 
+            recentdate=message.internaldate, namespace=namespace,
+            subjectdate=message.internaldate)
+        return thread
+
+    @classmethod
+    def from_message_yahoo(cls, session, namespace, message):
+        try:
+            thread = session.query(cls).filter_by(g_thrid=message.g_thrid, # Find thread for this message
+                    namespace=namespace).one()
+            return thread.update_from_message(message)
+        except NoResultFound:
+            pass
+        except MultipleResultsFound:
+            log.info("Duplicate thread rows for thread")
             raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                 recentdate=message.internaldate, namespace=namespace,
