@@ -399,6 +399,43 @@ class Message(JSONSerializable, Base, HasRevisions):
 
         return json_headers
 
+    @classmethod
+    def run_jwz(cls, session, namespace, message):
+    """
+    Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
+    are not taken into account, even if they change.)
+
+    Returns the updated or new thread, and adds the message to the thread.
+    Doesn't commit.
+    """
+    try:
+        # Get all messages
+        msglist = session.query(cls.jwz_repr).filter_by(namespace=namespace).all()
+
+        # Find where this message belongs:
+        msglist.append(message)
+        subject_table = jwzthreading.thread(msglist)
+
+          subject_table = jwzthreading.thread(msglist)
+        list = subject_table.items()
+        for subj, container in L:
+            print_container(container)
+
+
+
+
+        return thread.update_from_message(message)
+    except NoResultFound:
+        pass
+    except MultipleResultsFound:
+        log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
+        raise
+    thread = cls(subject=message.subject, 
+        recentdate=message.internaldate, namespace=namespace,
+        subjectdate=message.internaldate)
+    return thread
+
+
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
 common_content_types = ['text/plain',
@@ -625,7 +662,7 @@ class Thread(JSONSerializable, Base):
     @classmethod
     def from_message_yahoo(cls, session, namespace, message):
         try:
-            thread = session.query(cls).filter_by(g_thrid=message.g_thrid, # Find thread for this message
+            thread = session.query(cls).filter_by(g_thrid=message.y_thrid, # Find thread for this message
                     namespace=namespace).one()
             return thread.update_from_message(message)
         except NoResultFound:
@@ -633,9 +670,16 @@ class Thread(JSONSerializable, Base):
         except MultipleResultsFound:
             log.info("Duplicate thread rows for thread")
             raise
-        thread = cls(subject=message.subject, g_thrid=message.g_thrid,
+
+        thread = cls(subject=message.subject, y_thrid=message.y_thrid,
                 recentdate=message.internaldate, namespace=namespace,
                 subjectdate=message.internaldate)
+
+        subject_table = jwzthreading.thread(msglist)
+        list = subject_table.items()
+        for subj, container in L:
+            print_container(container)
+        
         return thread
 
     def cereal(self):

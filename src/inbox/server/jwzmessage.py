@@ -13,47 +13,36 @@ class JWZ_Message(object):
         self.headers = self.parsed.headers
 
         # Used by JWZ Algorithm
-        self._message = message
-        self._message_id = self.headers.get('Message-ID')
-        self._references = None
-        self._subject = self.headers.get('Subject', 'No Subject')
+        self.message = message
 
-    @property
-    def message(self):
-        return self._message
+        self.set_message_id()
+        self.set_references()
+        self.set_subject()
 
-    @property
-    def message_id(self):
-        if self._message_id is None:
-            print "headers = ", self.headers
+    def set_message_id(self):
+        self.message_id = msgid_pat.search(self.headers.get('Message-ID', ''))
 
+        if self.message_id is None:
             raise ValueError, 'Message does not contain a Message-ID header'
 
-        return self._message_id
+        self.message_id = self.message_id.group(1)
 
-    @property
-    def references(self):
-        if self._references is not None:
-            return self._references
-
+    def set_references(self):
         # Get list of unique message IDs from the References: header  
         refs = self.headers.get('References', '')
-        self._references = msgid_pat.findall(refs)
-        self._references = uniq(self._references)
+        self.references = msgid_pat.findall(refs)
+        self.references = uniq(self.references)
 
         # Get In-Reply-To: header and add it to references                                                                                                                                                 
         in_reply_to = self.headers.get('In-Reply-To', '')
         matches = msgid_pat.search(in_reply_to)
         if matches:
             msg_id = matches.group(1)
-            if msg_id not in self._references:
-                self._references.append(msg_id)
+            if msg_id not in self.references:
+                self.references.append(msg_id)
 
-        return self._references
-
-    @property
-    def subject(self):
-        return self._subject
+    def set_subject(self):
+        self.subject = self.headers.get('Subject', 'No Subject')
 
     def __repr__ (self):
-        return '<%s: %r>' % (self.__class__.__name__, self._message_id)
+        return '<%s: %r>' % (self.__class__.__name__, self.message_id)

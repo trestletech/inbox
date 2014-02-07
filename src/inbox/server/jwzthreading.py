@@ -111,6 +111,7 @@ def thread (msglist):
             if container is None:
                 container = Container()
                 container.message_id = ref
+
                 id_table[ref] = container
 
             if (prev is not None):
@@ -198,6 +199,63 @@ def thread (msglist):
 
     return subject_table
 
+def thread_from_container(ctr, depth):
+    messages = [ctr.message]
+
+    # Base case
+    if len(ctr.children) == 0:
+        return messages
+
+    # Recursive case
+    for c in ctr.children:
+        child_messages = thread_from_container(c, depth+1)
+        
+        # TODO[kavya]: Check if this is true
+        if child_messages is not None:
+            messages += child_messages
+    return messages
+
+# TODO[kavya]: New Thread table?
+def create_threads(msglist):
+    subject_table = thread(msglist)
+    items = subject_table.items()
+
+    for subj, container in items:
+        if container.message is None:
+            for c in container.children:
+                child_thread = thread_from_container(c, 0)
+                
+                print "\nTHREAD = ", child_thread
+
+                assign_thread_id(child_thread)
+        else:
+            # TODO[kavya]: Check if this is true
+            print "\n SHOULD NOT GET HERE!"
+
+def assign_thread_id(thread):
+    thread_id = None
+    for message in thread:
+        if message.thread_id is not None:
+            if ((thread_id is not None) and (message.thread_id != thread_id)):
+                print "ERROR!"
+            else:
+                thread_id = message.thread_id
+
+    if thread_id is None:
+        thread = Thread.from_message_yahoo()
+        db_session.add(thread)
+        db_session.flush()
+
+        thread_id = thread.id        
+
+    # NEED TO SAVE TO DB HERE
+    for message in thread:
+        if message.thread_id is None:
+            message.thread_id = thread_id
+
+    return thread_id
+
+# For debugging:
 def print_container(ctr, depth=0, debug=0):
     import sys
     sys.stdout.write(depth*' m***m ')
@@ -210,9 +268,11 @@ def print_container(ctr, depth=0, debug=0):
 
     sys.stdout.write('\n')
     if len(ctr.children) == 0:
-        print "No children"
+        print "No children\n"
     for c in ctr.children:
         print_container(c, depth+1)
+
+
 
 # Usage:
 # subject_table = thread(msglist)

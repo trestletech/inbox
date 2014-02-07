@@ -311,6 +311,8 @@ def create_yahoo_message(db_session, log, account, folder_name, uid,
     if new_uid:
         new_uid.message.jwz_repr = JWZ_Message(body)
 
+        
+
         # NOTE: This code _requires_ autoflush=True, otherwise duplicate
         # threads may attempt to be created and crash.
         thread = new_uid.message.thread = Thread.from_message_yahoo(db_session,
