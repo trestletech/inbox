@@ -192,5 +192,5 @@ class API(object):
     # For first_10_subjects example:
     def first_n_subjects(self, n):
         with session_scope() as db_session:
-            subjects = db_session.query(Thread.subject).limit(n).all()
+            subjects = db_session.query(Thread.subject, Thread.g_thrid).limit(n).all()
             return subjects

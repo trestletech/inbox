@@ -17,7 +17,7 @@ from flanker import mime
 from inbox.util.misc import or_none
 from inbox.util.addr import parse_email_address
 from inbox.util.file import mkdirp
-from inbox.util.misc import parse_ml_headers
+from inbox.util.misc import parse_ml_headers, set_references
 
 from inbox.server.jwzmessage import JWZ_Message
 
@@ -172,6 +172,10 @@ def create_message(db_session, log, account, folder_name, uid, internaldate,
         # Optional mailing list headers
         new_msg.mailing_list_headers = parse_ml_headers(parsed.headers)
 
+        new_msg.references = parsed.headers.get('References')
+
+        new_msg.internaldate = internaldate
+
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
                 msg_uid=uid, message=new_msg)
         imapuid.update_flags(flags)
@@ -309,15 +313,9 @@ def create_yahoo_message(db_session, log, account, folder_name, uid,
     new_uid = create_message(db_session, log, account, folder_name, uid,
             internaldate, flags, body)
     if new_uid:
-        new_uid.message.jwz_repr = JWZ_Message(body)
-
-        
-
         # NOTE: This code _requires_ autoflush=True, otherwise duplicate
         # threads may attempt to be created and crash.
-        thread = new_uid.message.thread = Thread.from_message_yahoo(db_session,
-            new_uid.imapaccount.namespace, new_uid.message)
+        # TODO[kavya]: Check labels and shit a la Gmail?
 
-        # TODO[kavya]: Check labels and shit a la Gmail
-
+        Message.run_jwz(db_session, new_uid.imapaccount.namespace, new_uid.message)
         return new_uid

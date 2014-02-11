@@ -1,0 +1,51 @@
+MYJWZ:
+/myjwz.py 
+items =  [('Test Conversations', <Container 1a28440: None>), (' Test Conversations', <Container 1a283b0: None>)]
+
+
+
+subj =  Test Conversations
+NoneNone
+ m***m '<CALkxmqBeix8Gia3po6yemjRCe8viAkp4+O7KFHbfCvUULpHngQ@mail.gmail.com>''Test Conversations'
+No children
+
+ m***m '<CALkxmqDUWw4uzir=PkMdtRY_6Y8Bzn_cppJ_uS0Th6W8jTMePw@mail.gmail.com>''Test Conversations'
+No children
+
+subj =   Test Conversations
+NoneNone
+ m***m '<1391460377.71983.YahooMailNeo@web162804.mail.bf1.yahoo.com>''Re: Test Conversations'
+No children
+
+ m***m '<CALkxmqCOcAOVv=vRQkn8VRzGaCFRvaNY-ykQwdk0ssZoh=ifjw@mail.gmail.com>''Re: Test Conversations'
+No children
+
+
+JWZ :
+/jwz.py 
+items =  [('Test Conversations', <Container 7f44be43f9e0: None>)]
+
+
+
+subj =  Test Conversations
+NoneNone
+ *** 'CALkxmqBeix8Gia3po6yemjRCe8viAkp4+O7KFHbfCvUULpHngQ@mail.gmail.com''Test Conversations'
+ ***  *** '1391460377.71983.YahooMailNeo@web162804.mail.bf1.yahoo.com''Re: Test Conversations'
+ ***  ***  *** 'CALkxmqCOcAOVv=vRQkn8VRzGaCFRvaNY-ykQwdk0ssZoh=ifjw@mail.gmail.com''Re: Test Conversations'
+No children
+
+ *** 'CALkxmqDUWw4uzir=PkMdtRY_6Y8Bzn_cppJ_uS0Th6W8jTMePw@mail.gmail.com''Test Conversations'
+No children
+
+
+
+subj =  Test Conversations
+NoneNone
+ m***m 'CALkxmqBeix8Gia3po6yemjRCe8viAkp4+O7KFHbfCvUULpHngQ@mail.gmail.com''Test Conversations'
+ m***m  m***m '1391460377.71983.YahooMailNeo@web162804.mail.bf1.yahoo.com''Re: Test Conversations'
+ m***m  m***m  m***m 'CALkxmqCOcAOVv=vRQkn8VRzGaCFRvaNY-ykQwdk0ssZoh=ifjw@mail.gmail.com''Re: Test Conversations'
+No children
+
+ m***m 'CALkxmqDUWw4uzir=PkMdtRY_6Y8Bzn_cppJ_uS0Th6W8jTMePw@mail.gmail.com''Test Conversations'
+No children
+

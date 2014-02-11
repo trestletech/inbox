@@ -1,0 +1,73 @@
+
+    @classmethod
+    def run_jwz(cls, session, namespace, message):
+        # TODO[kavya]
+        # CHECK goto step_5()?
+        if len(message.references) == 0:
+            do_something()
+
+        # .references includes in-reply-to as last elt
+        # TODO[kavya]: Get indv. columns only, or whole Message?
+        msglist = session.query(
+            cls.message_id, 
+            cls.jwz_parent, 
+            cls.jwz_children,
+            cls.jwz_dummy).filter(
+            cls.message_id.in_(message.references)).all()
+
+        # TODO[kavya]
+        if len(msglist) == 0:
+            do_something()
+
+        # TODO[kavya]: Is this dict needed; could query DB one-by-one?
+        self.msgdict = { m[0]: m for m in msglist }
+
+        prev = None
+        for ref_id in message.references:
+            if ref_id not in msgdict:
+                self.msgdict[ref_id] = create_dummy_message(ref_id)
+
+            if (prev is not None):
+                # Cycle prevention 1:
+                # TODO[kavya]: How the fuck? CHECK: Don't need anymore!
+                if ref_id is message.message_id:
+                    continue
+
+                # Cycle prevention 2: 
+                if cls.has_descendant(ref_id, prev):
+                    continue
+
+                self.link(prev, ref_id)
+
+            prev = container
+
+        # TODO[kavya]: Check What about Cycle prevention HERE?
+        if prev is not None:
+            # Needed here? Only if this message existed as dummy earlier
+            self.last_link(prev)
+
+
+
+    try:
+        # Get all messages
+        msglist = session.query(cls.jwz_repr).filter_by(namespace=namespace).all()
+
+        # Find where this message belongs:
+        msglist.append(message)
+        subject_table = jwzthreading.thread(msglist)
+
+          subject_table = jwzthreading.thread(msglist)
+        list = subject_table.items()
+        for subj, container in L:
+            print_container(container)
+
+        return thread.update_from_message(message)
+    except NoResultFound:
+        pass
+    except MultipleResultsFound:
+        log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
+        raise
+    thread = cls(subject=message.subject, 
+        recentdate=message.internaldate, namespace=namespace,
+        subjectdate=message.internaldate)
+    return thread

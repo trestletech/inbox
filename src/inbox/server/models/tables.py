@@ -11,7 +11,6 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 from sqlalchemy.types import BLOB
 
-
 from bs4 import BeautifulSoup, Doctype, Comment
 from Crypto import Random
 from Crypto.Cipher import AES
@@ -255,6 +254,8 @@ class Message(JSONSerializable, Base, HasRevisions):
 
     mailing_list_headers = Column(JSON, nullable=True)
 
+    references = Column(JSON, nullable=True)
+
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
     # need to send over the wire.
@@ -273,9 +274,15 @@ class Message(JSONSerializable, Base, HasRevisions):
     g_msgid = Column(String(40), nullable=True)
     g_thrid = Column(String(40), nullable=True)
 
-    # Only on messages from Yahoo
-    # TODO[kavya]: CHECK Column type!
-    jwz_repr = deferred(Column(BLOB()))
+    # JWZ columns, only on messages from Yahoo
+    jwz_parent_id = Column(Integer, ForeignKey('message.id'))
+    jwz_children = relationship('Message',
+        backref=backref('jwz_parent', remote_side=[id])
+    )
+    jwz_pruned = relationship('Message',
+        backref=backref('jwz_parent', remote_side=[id])
+    )
+    jwz_dummy = Column(Boolean, default=False, nullable=True)
 
     @property
     def namespace(self):
@@ -399,42 +406,180 @@ class Message(JSONSerializable, Base, HasRevisions):
 
         return json_headers
 
+    @property
+    def references(self):
+        import re
+
+        msgid_pat = re.compile('<([^>]+)>')
+
+        # Get list of unique message IDs from the References: header  
+        set = {}
+        references = msgid_pat.findall(self.references)
+        references = [set.setdefault(e,e) for e in references
+            if e not in set.keys()]
+
+        # Get In-Reply-To: header and add it to references                                                                                                                                                 
+        in_reply_to = self.in_reply_to
+
+        matches = msgid_pat.search(in_reply_to)
+        if matches:
+            msg_id = matches.group(1)
+            if msg_id not in references:
+                references.append(msg_id)
+
+        return references
+
+    @property
+    def message_id(self):
+        message_id = msgid_pat.search(self.message_id)
+
+        if message_id is None:
+            raise ValueError, 'Message does not contain a Message-ID header'
+
+        message_id = message_id.group(1)
+        return message_id
+
+    @property
+    def subject(self):
+        return (self.subject or 'No Subject')
+
+    # TODO[kavya]: Msg with a dummy msg's ID arrives!
+    # TODO[kavya]: Commit changes to DB
     @classmethod
     def run_jwz(cls, session, namespace, message):
-    """
-    Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
-    are not taken into account, even if they change.)
+        if len(message.references) == 0:
+            return
 
-    Returns the updated or new thread, and adds the message to the thread.
-    Doesn't commit.
-    """
-    try:
-        # Get all messages
-        msglist = session.query(cls.jwz_repr).filter_by(namespace=namespace).all()
+        # STEP 1: Chaining refs
+        prev = None
+        for ref_id in message.references:
+            try:
+                ref = session.query(cls).filter(message_id=ref_id).one()
+            
+            # Create dummy message
+            except NoResultFound:
+                ref = cls()
+                ref.message_id = ref_id
+                ref.internaldate = message.internaldate
+                ref.body = "InboxDummyMessage"
+                ref.size = len(ref.body)
+                ref.calculate_sanitized_body()
+                ref.jwz_dummy = True     
+            
+            except MultipleResultsFound:
+                log.info("Duplicate")
+                raise
 
-        # Find where this message belongs:
-        msglist.append(message)
-        subject_table = jwzthreading.thread(msglist)
+            if prev is not None:
+                # Don't add if it creates a cycle
+                if cls.has_descendant(session, namespace, ref, prev):
+                    continue
 
-          subject_table = jwzthreading.thread(msglist)
-        list = subject_table.items()
-        for subj, container in L:
-            print_container(container)
+                # Else, add link
+                prev.add_child(ref)
 
+            prev = ref
 
+        if prev is not None:
+            # Needed here? Only if this message existed as dummy earlier
+            if message.jwz_parent is not None:
+                message.jwz_parent.jwz_children.remove(message)
+                message.jwz_parent = None
 
+            prev.add_child(message)
 
-        return thread.update_from_message(message)
-    except NoResultFound:
-        pass
-    except MultipleResultsFound:
-        log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
-        raise
-    thread = cls(subject=message.subject, 
-        recentdate=message.internaldate, namespace=namespace,
-        subjectdate=message.internaldate)
-    return thread
+        # STEP 2: ROOT SET
+        root = cls.find_root(session, namespace, message)
+        
+        # STEP 3, 4: PRUNE
+        assert (root and root.jwz_parent is None)
+        new_root = cls.prune(session, namespace, root)
+        
+        assert(len(new_root) == 1)
+        root = new_root[0]
 
+        # STEP 5: SUBJECT GROUPING
+        if not root.jwz_dummy:
+            if root.thread_id is None:
+                thread = Thread.create_jwz_thread(session, namespace, root)
+                root.assign_thread(thread)
+            else:
+                message.thread = root.thread
+        else:
+            if root.jwz_pruned[0].thread_id is None:
+                thread = Thread.create_jwz_thread(session, namespace,
+                    root.jwz_pruned[0])
+                root.jwz_pruned[0].assign_thread(thread)
+            else:
+                message.thread = root.jwz_pruned[0].thread
+        return
+
+    @classmethod
+    def has_descendant(cls, session, namespace, ancestor, descendant):
+        if ancestor.id == descendant.id:
+            return True
+
+        try:
+            children = session.query(cls).filter(
+                message_id.in_(ancestor.jwz_children)).all()
+
+            for c in children:
+                if c.id == descendant.id:
+                    return True
+                elif cls.has_descendant(c, descendant):
+                    return True
+        
+            return False
+
+        except NoResultFound:
+            return False
+
+    def add_child(self, child):
+        # Don't change existing links
+        if (child.jwz_parent is None):
+            child.jwz_parent = self
+
+        self.jwz_children.append(child)
+
+    @classmethod
+    def find_root(cls, session, namespace, message):
+        try:
+            root_ref = session.query(cls).filter(
+                message_id=message.references[0]).one()
+        except NoResultFound:
+            raise
+
+        if root_ref.jwz_parent is None:
+            return root_ref
+        else:
+            return cls.find_root(session, namespace, root_ref)
+
+    @classmethod
+    def prune(cls, session, namespace, message):
+        # Prune children, assembling a new list of children
+        for c in message.jwz_children:
+            new_children = prune(cls, session, namespace, c)
+            for d in new_children:
+                message.jwz_pruned.append(d)
+
+        # 4.A: Nuke empty containers
+        if (is_dummy(message) and len(message.jwz_children) == 0):
+            return []
+        # 4.B: Promote children
+        elif (is_dummy(message) and (len(message.jwz_children) == 1 or
+               message.jwz_parent is not None)):
+            L = message.jwz_children
+            return L
+        else:
+            # Leave this node in place
+            return [message]
+
+    def assign_thread(self, thread):
+        for c in self.jwz_pruned:
+            c.assign_thread(thread)
+
+        assert (self.thread_id == None)
+        self.thread = thread
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -627,6 +772,9 @@ class Thread(JSONSerializable, Base):
     # unique globally.
     g_thrid = Column(String(255), nullable=True, index=True)
 
+    root_message_id = Column(Integer, ForeignKey('message.id'))
+    root_message = relationship('Message', single_parent=True)
+
     def update_from_message(self, message):
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
@@ -661,35 +809,89 @@ class Thread(JSONSerializable, Base):
 
     @classmethod
     def from_message_yahoo(cls, session, namespace, message):
-        try:
-            thread = session.query(cls).filter_by(g_thrid=message.y_thrid, # Find thread for this message
-                    namespace=namespace).one()
-            return thread.update_from_message(message)
-        except NoResultFound:
-            pass
-        except MultipleResultsFound:
-            log.info("Duplicate thread rows for thread")
-            raise
-
-        thread = cls(subject=message.subject, y_thrid=message.y_thrid,
-                recentdate=message.internaldate, namespace=namespace,
-                subjectdate=message.internaldate)
-
-        subject_table = jwzthreading.thread(msglist)
-        list = subject_table.items()
-        for subj, container in L:
-            print_container(container)
-        
-        return thread
+        Message.run_jwz(session, namespace, message)
 
     def cereal(self):
         """ Threads are serialized with full message data. """
         d = {}
         d['id'] = self.id
-        d['messages'] = [m.cereal() for m in self.messages]
+        d['messages'] = [m.cereal() for m in self.messages] # ASK: WHERE!
         d['subject'] = self.subject
         d['recentdate'] = self.recentdate
         return d
+
+    @classmethod
+    def create_jwz_thread(cls, session, namespace, root):
+        subj = restrip_pat.sub('', root.subject)
+            
+        if subj == "":
+            return
+
+        # Generate derivates!
+        subj_derivatives = []
+
+        try:
+            threads = session.query(Thread).filter(
+                subject.in_(subj_derivatives)).all()
+        except NoResultFound:
+            thread = Thread(subject=root.subject, recentdate=root.internaldate,
+                namespace=namespace, subjectdate=root.internaldate,
+                root_message=root)
+            return thread
+
+        thread_id = None
+        for t in threads:
+            troot = t.root_message
+
+            if root.is_dummy and troot.is_dummy:
+                for c in root.jwz_pruned:
+                    troot.jwz_pruned.append(c)
+                    root.jwz_pruned.remove(c)
+
+                assert(thread_id == None)
+                thread_id = t.id
+
+            elif root.is_dummy or troot.is_dummy:
+                if root.is_dummy:
+                    root.jwz_pruned.append(troot)
+                    troot.jwz_parent = root
+
+                    t.subject = subj
+                    t.root_message = root
+
+                else:
+                    troot.jwz_pruned.append(root)
+                    root.jwz_parent = troot
+
+                assert(thread_id == None)
+                thread_id = t.id
+
+            # Fewer levels of 're:' headers
+            elif len(t.subject) < len(subj):
+                troot.jwz_pruned.append(root)
+                root.jwz_parent = troot
+
+                assert(thread_id == None)
+                thread_id = t.id
+
+            elif len(t.subject) > len(subj):
+                root.jwz_pruned.append(troot)
+                troot.jwz_parent = root
+
+                t.subject = subj
+                t.root_message = root
+
+                assert(thread_id == None)
+                thread_id = t.id
+
+        if thread_id is None:
+            thread = Thread(subject=root.subject, recentdate=root.internaldate,
+                namespace=namespace, subjectdate=root.internaldate,
+                root_message=root)
+            return thread
+        else:
+            thread = session.query(Thread).get(thread_id)
+            return thread
 
 class FolderSync(Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
