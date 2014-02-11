@@ -5,21 +5,19 @@ import sys
 
 import sqlalchemy.orm.exc
 
-from inbox.util.url import provider_from_address
+from inbox.util.url import provider_from_address, NotSupportedError
+from inbox.server.pool import IMAP_HOSTS, VERIFY_HANDLERS
 
 from .log import get_logger
 log = get_logger()
 
 import sqlalchemy.orm.exc
 
-from . import oauth
+from .oauth import AUTH_HANDLERS
 from .models.tables import User, UserSession, Namespace, ImapAccount
 
-IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
-                'Yahoo': 'imap.mail.yahoo.com' }
-
-class NotSupportedError(Exception):
-    pass
+#IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
+#                'Yahoo': 'imap.mail.yahoo.com' }
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
@@ -48,16 +46,14 @@ def get_session(db_session, session_token):
 # TODO[kavya]: Auth's error handling
 def auth_account(email_address):
     provider = provider_from_address(email_address)
+    handler = AUTH_HANDLERS.get(provider)
 
-    if (provider == 'Gmail'):
-        response = oauth.oauth(email_address)
-    elif (provider == 'Yahoo'):
-        response = oauth.auth(email_address)
-    else:
+    if handler is None:
         # TODO: Error handling/propogation to caller here?
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
         sys.exit(1)
 
+    response = handler(email_address)
     return response
 
 def make_account(db_session, email_address, response):
@@ -92,7 +88,6 @@ def make_account(db_session, email_address, response):
     elif (provider == 'Yahoo'):
         account.email_address = response['email']
         account.password = response['password']
-        account.is_oauthed = False
         account.provider = 'Yahoo'
         account.imap_host = IMAP_HOSTS['Yahoo']
         account.date = datetime.datetime.utcnow()
@@ -105,21 +100,16 @@ def make_account(db_session, email_address, response):
     return account
 
 def verify_account(db_session, account):
-    from inbox.server.pool import verify_gmail_account, verify_yahoo_account
-
     provider = provider_from_address(account.email_address)
+    handler = VERIFY_HANDLERS.get(provider)
 
-    if (provider == 'Gmail'):
-        verify_gmail_account(account)
-
-    elif (provider == 'Yahoo'):
-        verify_yahoo_account(account)
-
-    else:
+    if handler is None:
         # TODO[kavya]: Bubbled up to caller here, check if okay
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
 
+    handler(account)   
     commit_account(db_session, account)
+
     return account
 
 def commit_account(db_session, account):
@@ -127,45 +117,6 @@ def commit_account(db_session, account):
     db_session.commit()
 
     log.info("Stored new account {0}".format(account.email_address))
-
-# def make_nonoauth_account(db_session, email_pw_dict):
-#     user = User()
-#     namespace = Namespace()
-#     account = ImapAccount(user=user, namespace=namespace)
-#     account.email_address = email_pw_dict['email']
-#     account.password = email_pw_dict['password']
-#     account.date = datetime.datetime.utcnow()
-#     account.provider = 'Yahoo'
-
-#     db_session.add(account)
-#     db_session.commit()
-#     log.info("Stored new account {0}".format(account.email_address))
-#     return account
-
-# def make_oauth_account(db_session, access_token_dict):
-#     user = User()
-#     namespace = Namespace()
-#     account = ImapAccount(user=user, namespace=namespace)
-#     account.email_address = access_token_dict['email']
-#     account.o_token_issued_to = access_token_dict['issued_to']
-#     account.o_user_id = access_token_dict['user_id']
-#     account.o_access_token = access_token_dict['access_token']
-#     account.o_id_token = access_token_dict['id_token']
-#     account.o_expires_in = access_token_dict['expires_in']
-#     account.o_access_type = access_token_dict['access_type']
-#     account.o_token_type = access_token_dict['token_type']
-#     account.o_audience = access_token_dict['audience']
-#     account.o_scope = access_token_dict['scope']
-#     account.o_email = access_token_dict['email']
-#     account.o_refresh_token = access_token_dict['refresh_token']
-#     account.o_verified_email = access_token_dict['verified_email']
-#     account.date = datetime.datetime.utcnow()
-#     account.provider = 'Gmail'
-
-#     db_session.add(account)
-#     db_session.commit()
-#     log.info("Stored new account {0}".format(account.email_address))
-#     return account
 
 def get_account(db_session, email_address, callback=None):
     account = db_session.query(ImapAccount).filter(

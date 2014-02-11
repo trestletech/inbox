@@ -14,11 +14,15 @@ from imapclient import IMAPClient
 from .models import session_scope
 from .models.tables import ImapAccount, User, Namespace
 from .session import verify_imap_account
+from .oauth import AUTH_TYPES
 from .log import get_logger
 log = get_logger()
 
 IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
                 'Yahoo': 'imap.mail.yahoo.com' }
+
+VERIFY_HANDLERS = { 'Gmail': verify_gmail_account,
+                        'Yahoo': verify_yahoo_account }
 
 # Memory cache for per-user IMAP connection pool.
 imapaccount_id_to_connection_pool = {}
@@ -78,7 +82,7 @@ class IMAPConnectionPool(ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             # Refresh token if need be, for OAuthed accounts
-            if (account.is_oauthed):
+            if AUTH_TYPES.get(account.provider) == 'OAuth':
                 account = verify_imap_account(db_session, account)
                 self.o_access_token = account.o_access_token
 

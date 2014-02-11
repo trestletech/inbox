@@ -27,6 +27,12 @@ OAUTH_SCOPE = " ".join([
     'https://www.googleapis.com/auth/calendar'  # calendar
     ])
 
+AUTH_TYPES = { 'Gmail': 'OAuth', 
+                'Yahoo': 'Password' }
+
+AUTH_HANDLERS = { 'Gmail': oauth,
+                    'Yahoo': auth }
+
 class OauthError(Exception):
     pass
 
