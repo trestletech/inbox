@@ -27,7 +27,7 @@ color '36;1' "
 
 color '35;1' 'Downloading and building Python 2.7.7 ...'
 wget https://www.python.org/ftp/python/2.7.7/Python-2.7.7.tgz
-tar xfz Python-2.7.7.tgz
+tar xfz Python-2.7.7.tgz --no-same-owner
 cd Python-2.7.7/
 ./configure
 make
