@@ -25,6 +25,18 @@ color '36;1' "
      https://www.github.com/inboxapp/inbox
 "
 
+color '35;1' 'Downloading and building Python 2.7.7 ...'
+wget https://www.python.org/ftp/python/2.7.7/Python-2.7.7.tgz
+tar xfz Python-2.7.7.tgz
+cd Python-2.7.7/
+./configure
+make
+make install
+cd ..
+rm Python-2.7.7.tgz
+rm -r Python-2.7.7
+
+
 color '35;1' 'Updating packages...'
 apt-get update
 apt-get -y install python-software-properties
@@ -33,6 +45,8 @@ apt-get -y install python-software-properties
 echo "mysql-server mysql-server/root_password password root" | debconf-set-selections
 echo "mysql-server mysql-server/root_password_again password root" | debconf-set-selections
 
+
+
 color '35;1' 'Installing dependencies from apt-get...'
 apt-get -y install git \
                    wget \
@@ -40,7 +54,6 @@ apt-get -y install git \
                    mysql-server \
                    mysql-client \
                    redis-server \
-                   python \
                    python-dev \
                    python-pip \
                    python-setuptools \
