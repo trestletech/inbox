@@ -1,9 +1,6 @@
-
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-                        Enum, ForeignKey, Text, func, event, and_, or_, asc,
-                        desc)
-from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
-                            validates, object_session)
+from sqlalchemy import (Column, Integer, String, Boolean,
+                        Enum, ForeignKey, event)
+from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.expression import false
 
@@ -13,7 +10,7 @@ from inbox.models.roles import Blob
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-
+from inbox.models.message import Message
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -87,10 +84,10 @@ class Part(Block):
         as well as attachments.
     """
 
-    id = Column(Integer, ForeignKey('block.id', ondelete='CASCADE'),
+    id = Column(Integer, ForeignKey(Block.id, ondelete='CASCADE'),
                 primary_key=True)
 
-    message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'))
+    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'))
     message = relationship(
         'Message',
         primaryjoin='and_(Part.message_id==Message.id, '

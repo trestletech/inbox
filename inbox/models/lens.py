@@ -437,6 +437,7 @@ class Lens(MailSyncBase, HasPublicID):
     def _tag_subquery(self):
         if self.tag is None:
             return None
+        from inbox.models.tagitem import TagItem
         return self.db_session.query(TagItem).join(Tag). \
             filter(or_(Tag.name == self.tag,
                        Tag.public_id == self.tag))
