@@ -137,6 +137,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         """
 
         _rqd = [account, mid, folder_name, received_date, flags, body_string]
+
+        if not any(_rqd):
+            MailSyncBase.__init__(self, *args, **kwargs)
+            return
+
         if any(_rqd) and not all([v != None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
@@ -440,7 +445,7 @@ class SpoolMessage(Message):
 
 
     def __init__(self, *args, **kwargs):
-        SpoolMessage.__init__(self, *args, **kwargs)
+        Message.__init__(self, *args, **kwargs)
         if self.inbox_uid:
             self.public_id = self.inbox_uid
 
