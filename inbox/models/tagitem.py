@@ -1,28 +1,9 @@
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship, backref
 
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-                        Enum, ForeignKey, func, event, and_, or_, asc,
-                        desc)
-from sqlalchemy.orm import (relationship, backref,
-                            validates, object_session)
-from sqlalchemy.sql.expression import false, true
-
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.schema import UniqueConstraint
-
-
-from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
-                             extract_from_plain)
-
-from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-from inbox.models.namespace import Namespace
-
-
-
 from inbox.models.thread import Tag
 from inbox.models.thread import Thread
-
 
 
 class TagItem(MailSyncBase):
@@ -30,7 +11,7 @@ class TagItem(MailSyncBase):
     thread_id = Column(Integer, ForeignKey(Thread.id), nullable=False)
     tag_id = Column(Integer, ForeignKey(Tag.id), nullable=False)
     thread = relationship(
-        'Thread',
+        Thread,
         backref=backref('tagitems',
                         collection_class=set,
                         cascade='all, delete-orphan',

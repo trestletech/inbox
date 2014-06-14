@@ -3,15 +3,10 @@ from sqlalchemy import Column, DateTime
 
 from inbox.sqlalchemy_ext.util import Base36UID, generate_public_id
 
-from datetime import datetime
-from sqlalchemy import Column, DateTime
-
-from inbox.sqlalchemy_ext.util import generate_public_id
 
 class HasPublicID(object):
     public_id = Column(Base36UID, nullable=False,
                        index=True, default=generate_public_id)
-
 
 
 class AutoTimestampMixin(object):

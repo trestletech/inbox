@@ -21,7 +21,7 @@ def test_soft_delete(db, config):
     m.received_date=datetime.datetime.utcnow()
     m.size=0
     m.sanitized_body=""
-    m.snippet="")
+    m.snippet=""
 
     u = ImapUid(message=m, imapaccount_id=ACCOUNT_ID, folder_id=f.id,
                 msg_uid=9999, extra_flags="")

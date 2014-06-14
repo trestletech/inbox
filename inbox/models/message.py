@@ -336,12 +336,30 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 in html_data or 'font-family:' in html_data:
             prettified = html_data
         else:
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '..', 'message_template.html')
-            with open(path, 'r') as f:
-                # template has %s in it. can't do format because python
-                # misinterprets css
-                prettified = f.read() % html_data
+            prettified = """
+            <html><head>
+            <style rel="stylesheet" type="text/css">
+            body { background-color:#FFF;
+            font-family: HelveticaNeue, courier, sans-serif;
+            font-size: 15px;
+            color:#333;
+            font-variant:normal;
+            line-height:1.6em;
+            font-style:normal;
+            text-align:left;
+            position:relative;
+            margin:0;
+            padding:20px; }
+            a { text-decoration: underline;}
+            a:hover {
+             border-radius:3px; background-color: #E9E9E9;
+             }
+            </style>
+            <base target="_blank" />
+            </head><body>
+            %s
+            </body></html>
+            """.strip() % html_data
 
         return prettified
 
