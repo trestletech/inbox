@@ -55,7 +55,8 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
         encoder = APIEncoder()
         self.public_snapshot = encoder.default(obj)
 
-        if obj.__class__.__name__ == 'Message':  # hack
+        from inbox.models.message import Message
+        if isinstance(obj, Message):  # hack
             self.private_snapshot = {
                 'recentdate': obj.thread.recentdate,
                 'subjectdate': obj.thread.subjectdate,
