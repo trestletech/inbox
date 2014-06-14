@@ -9,8 +9,8 @@ from gevent import socket
 from inbox.log import get_logger
 from inbox.basicauth import AUTH_TYPES
 from inbox.auth.base import verify_imap_account
-from inbox.models import session_scope
-from inbox.models.tables.imap import ImapAccount
+from inbox.session import session_scope
+from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
 log = get_logger(purpose='sendmail')
 

@@ -13,8 +13,8 @@ from sqlalchemy import distinct, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.models.tables.base import Block, Message, Folder
-from inbox.models.tables.imap import ImapUid, UIDValidity
+from inbox.models import Block, Message, Folder
+from inbox.models.backends.imap import ImapUid, UIDValidity
 from inbox.models.message_util import create_message
 
 

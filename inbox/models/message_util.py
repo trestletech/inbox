@@ -11,7 +11,7 @@ from inbox.util.addr import parse_email_address_list
 from inbox.util.file import mkdirp
 from inbox.util.misc import parse_ml_headers, parse_references
 
-from inbox.models.tables.base import Message, SpoolMessage, Part
+from inbox.models import Message, SpoolMessage, Part
 from inbox.config import config
 
 
