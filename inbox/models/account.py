@@ -15,14 +15,15 @@ from inbox.basicauth import AUTH_TYPES
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
-
+from inbox.models.folder import Folder
 
 from inbox.models.base import MAX_INDEXABLE_LENGTH
 
 
 class Account(MailSyncBase, HasPublicID):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
-    email_address = Column(String(MAX_INDEXABLE_LENGTH), nullable=True, index=True)
+    email_address = Column(String(MAX_INDEXABLE_LENGTH),
+                           nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
                       nullable=False)
 
@@ -43,14 +44,14 @@ class Account(MailSyncBase, HasPublicID):
     # creates some folders on the remote backend, for example to provide
     # "archive" functionality on non-Gmail remotes.
     inbox_folder_id = Column(Integer,
-                             ForeignKey('folder.id', ondelete='SET NULL'),
+                             ForeignKey(Folder.id, ondelete='SET NULL'),
                              nullable=True)
     inbox_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.inbox_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
     sent_folder_id = Column(Integer,
-                            ForeignKey('folder.id', ondelete='SET NULL'),
+                            ForeignKey(Folder.id, ondelete='SET NULL'),
                             nullable=True)
     sent_folder = relationship(
         'Folder', post_update=True,
@@ -58,7 +59,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     drafts_folder_id = Column(Integer,
-                              ForeignKey('folder.id', ondelete='SET NULL'),
+                              ForeignKey(Folder.id, ondelete='SET NULL'),
                               nullable=True)
     drafts_folder = relationship(
         'Folder', post_update=True,
@@ -66,7 +67,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     spam_folder_id = Column(Integer,
-                            ForeignKey('folder.id', ondelete='SET NULL'),
+                            ForeignKey(Folder.id, ondelete='SET NULL'),
                             nullable=True)
     spam_folder = relationship(
         'Folder', post_update=True,
@@ -74,7 +75,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     trash_folder_id = Column(Integer,
-                             ForeignKey('folder.id', ondelete='SET NULL'),
+                             ForeignKey(Folder.id, ondelete='SET NULL'),
                              nullable=True)
     trash_folder = relationship(
         'Folder', post_update=True,
@@ -82,7 +83,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     archive_folder_id = Column(Integer,
-                               ForeignKey('folder.id', ondelete='SET NULL'),
+                               ForeignKey(Folder.id, ondelete='SET NULL'),
                                nullable=True)
     archive_folder = relationship(
         'Folder', post_update=True,
@@ -90,7 +91,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     all_folder_id = Column(Integer,
-                           ForeignKey('folder.id', ondelete='SET NULL'),
+                           ForeignKey(Folder.id, ondelete='SET NULL'),
                            nullable=True)
     all_folder = relationship(
         'Folder', post_update=True,
@@ -98,7 +99,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     starred_folder_id = Column(Integer,
-                               ForeignKey('folder.id', ondelete='SET NULL'),
+                               ForeignKey(Folder.id, ondelete='SET NULL'),
                                nullable=True)
     starred_folder = relationship(
         'Folder', post_update=True,
@@ -106,7 +107,7 @@ class Account(MailSyncBase, HasPublicID):
                     'Folder.deleted_at.is_(None))')
 
     important_folder_id = Column(Integer,
-                                 ForeignKey('folder.id', ondelete='SET NULL'),
+                                 ForeignKey(Folder.id, ondelete='SET NULL'),
                                  nullable=True)
     important_folder = relationship(
         'Folder', post_update=True,

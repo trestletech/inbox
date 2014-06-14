@@ -1,50 +1,25 @@
 import itertools
-import os
-import re
-import json
 
-from hashlib import sha256
-from datetime import datetime
-import bson
-
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
+from sqlalchemy import (Column, Integer, String, DateTime,
                         Enum, ForeignKey, Text, func, event, and_, or_, asc,
                         desc)
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
-                            validates, object_session)
-from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm import relationship, backref, validates, object_session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import BLOB
-from sqlalchemy.sql.expression import true, false
 
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.config import config
-from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.util.encoding import base36decode
-from inbox.util.file import Lock, mkdirp
-from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
-                             extract_from_plain)
-from inbox.util.misc import load_modules
-from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy_ext.util import (JSON, BigJSON, Base36UID,
-                                       maybe_refine_query)
-from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
-from inbox.basicauth import AUTH_TYPES
+from inbox.sqlalchemy_ext.util import JSON, Base36UID
 
-from inbox.models.roles import Blob
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
 from inbox.models.namespace import Namespace
 
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
-from inbox.models.message import SpoolMessage
+from inbox.models.message import Message, SpoolMessage
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
@@ -79,14 +54,17 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         return folderitem
 
     folderitems = relationship(
-        'FolderItem', backref=backref('thread',
-                                      uselist=False,
-                                      primaryjoin='and_('
-                                      'FolderItem.thread_id==Thread.id, '
-                                      'Thread.deleted_at==None)'),
+        FolderItem,
+        backref=backref('thread',
+                        uselist=False,
+                        primaryjoin='and_('
+                        'FolderItem.thread_id==Thread.id, '
+                        'Thread.deleted_at==None)'),
         primaryjoin='and_(FolderItem.thread_id==Thread.id, '
         'FolderItem.deleted_at==None)',
-        single_parent=True, collection_class=set, cascade='all, delete-orphan')
+        single_parent=True,
+        collection_class=set,
+        cascade='all, delete-orphan')
 
     tags = association_proxy(
         'tagitems', 'tag',
@@ -227,7 +205,7 @@ class DraftThread(MailSyncBase, HasPublicID):
     the copy.
     """
     master_public_id = Column(Base36UID, nullable=False)
-    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+    thread_id = Column(Integer, ForeignKey(Thread.id), nullable=False)
     thread = relationship(
         'Thread', primaryjoin='and_('
         'DraftThread.thread_id==remote(Thread.id),'
@@ -236,7 +214,7 @@ class DraftThread(MailSyncBase, HasPublicID):
             'draftthreads', primaryjoin='and_('
             'remote(DraftThread.thread_id)==Thread.id,'
             'remote(DraftThread.deleted_at)==None)'))
-    message_id = Column(Integer, ForeignKey('message.id'),
+    message_id = Column(Integer, ForeignKey(Message.id),
                         nullable=False)
 
     @classmethod
@@ -268,8 +246,6 @@ class DraftThread(MailSyncBase, HasPublicID):
         )
 
         return draftthread_copy
-
-
 
 
 class TagItem(MailSyncBase):

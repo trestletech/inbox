@@ -21,6 +21,9 @@ from inbox.models.namespace import Namespace
 from inbox.models.message import Message
 from inbox.models.thread import Thread
 from inbox.models.contact import Contact, MessageContactAssociation
+from inbox.models.block import Block
+from inbox.models.tag import Tag
+
 
 LENS_LIMIT_DEFAULT = 100
 
@@ -308,7 +311,7 @@ class Lens(MailSyncBase, HasPublicID):
     def match(self, message_tx):
         """Returns True if and only if the given message matches all
         filtering criteria."""
-        return all(filter(message_tx) for filter in self.filters)
+        return all(filter_(message_tx) for filter_ in self.filters)
 
     #
     # Methods related to creating a sqlalchemy filter

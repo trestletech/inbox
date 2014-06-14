@@ -31,8 +31,9 @@ class Folder(MailSyncBase):
     # folder with any specific name, canonicalized to lowercase.
     name = Column(String(MAX_FOLDER_NAME_LENGTH,
                          collation='utf8mb4_general_ci'))
-
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH))
+
+    __table_args__ = (UniqueConstraint('account_id', 'name'),)
 
     @property
     def namespace(self):
@@ -98,8 +99,6 @@ class Folder(MailSyncBase):
                 db_session.add(tag)
                 return tag
 
-    __table_args__ = (UniqueConstraint('account_id', 'name'),)
-
 
 class FolderItem(MailSyncBase):
     """ Mapping of threads to account backend folders.
@@ -117,7 +116,7 @@ class FolderItem(MailSyncBase):
 
     # Might be different from what we've synced from IMAP. (Local datastore
     # changes.)
-    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+    folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),
                        nullable=False)
 
     # We almost always need the folder name too, so eager load by default.
