@@ -1,50 +1,23 @@
-import itertools
-import os
-import re
-import json
-
-from hashlib import sha256
-from datetime import datetime
-import bson
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
                         Enum, ForeignKey, Text, func, event, and_, or_, asc,
                         desc)
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates, object_session)
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import BLOB
-from sqlalchemy.sql.expression import true, false
+from sqlalchemy.sql.expression import false
 
-from inbox.log import get_logger
-log = get_logger()
-
-from inbox.config import config
-from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.util.encoding import base36decode
-from inbox.util.file import Lock, mkdirp
-from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
-                             extract_from_plain)
-from inbox.util.misc import load_modules
-from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy_ext.util import (JSON, BigJSON, Base36UID,
-                                       maybe_refine_query)
-from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
-from inbox.basicauth import AUTH_TYPES
+from inbox.sqlalchemy_ext.util import JSON
 
 from inbox.models.roles import Blob
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
 
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
-common_content_types = ['text/plain',
+COMMON_CONTENT_TYPES = ['text/plain',
                         'text/html',
                         'multipart/alternative',
                         'multipart/mixed',
@@ -67,7 +40,7 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     from inbox.models.namespace import Namespace
 
     # Save some space with common content types
-    _content_type_common = Column(Enum(*common_content_types))
+    _content_type_common = Column(Enum(*COMMON_CONTENT_TYPES))
     _content_type_other = Column(String(255))
     filename = Column(String(255))
 
@@ -101,7 +74,7 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
 
 @event.listens_for(Block, 'before_insert', propagate=True)
 def serialize_before_insert(mapper, connection, target):
-    if target.content_type in common_content_types:
+    if target.content_type in COMMON_CONTENT_TYPES:
         target._content_type_common = target.content_type
         target._content_type_other = None
     else:

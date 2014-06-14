@@ -1,47 +1,18 @@
-import itertools
-import os
-import re
-import json
-
-from hashlib import sha256
-from datetime import datetime
-import bson
-
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-                        Enum, ForeignKey, Text, func, event, and_, or_, asc,
-                        desc)
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
-                            validates, object_session)
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import BLOB
-from sqlalchemy.sql.expression import true, false
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.config import config
-from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.util.encoding import base36decode
-from inbox.util.file import Lock, mkdirp
-from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
-                             extract_from_plain)
-from inbox.util.misc import load_modules
-from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy_ext.util import (JSON, BigJSON, Base36UID,
-                                       maybe_refine_query)
+from inbox.sqlalchemy_ext.util import BigJSON
 from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
-from inbox.basicauth import AUTH_TYPES
 
-from inbox.models.roles import Blob
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID 
-from inbox.models.namespace import Namespace 
+from inbox.models.mixins import HasPublicID
+from inbox.models.namespace import Namespace
+
 
 class Transaction(MailSyncBase, Revision, HasPublicID):
-
 
     """ Transactional log to enable client syncing. """
     # Do delete transactions if their associated namespace is deleted.
@@ -80,7 +51,7 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
         transaction is generated, as well as any other properties we want to
         have available in the transaction log. Used for client syncing and
         webhooks."""
-        from inbox.models.kellogs import APIEncoder
+        from inbox.api.kellogs import APIEncoder
         encoder = APIEncoder()
         self.public_snapshot = encoder.default(obj)
 
@@ -90,20 +61,5 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
                 'subjectdate': obj.thread.subjectdate,
                 'filenames': [part.filename for part in obj.parts if
                               part.is_attachment]}
-
-
-# class HasRevisions(object):
-#     """ Generic mixin which creates a read-only revisions attribute on the
-#         class for convencience.
-#     """
-#     @declared_attr
-#     def revisions(cls):
-#         return relationship('transaction',
-#                             primaryjoin="{0}.id==transaction.record_id".format(
-#                                 cls.__name__),
-#                             foreign_keys='transaction.record_id', viewonly=True)
-
-
-from inbox.models.transaction import Transaction
 
 HasRevisions = gen_rev_role(Transaction)

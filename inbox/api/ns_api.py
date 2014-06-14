@@ -11,10 +11,10 @@ from werkzeug.exceptions import HTTPException
 from inbox.models import (
     Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, SpoolMessage,
     Contact)
-from inbox.models.kellogs import jsonify
+from inbox.api.kellogs import jsonify
 from inbox.config import config
 from inbox import contacts, sendmail
-from inbox.models import InboxSession, session_scope
+from inbox.session import InboxSession, session_scope
 from inbox.transactions import client_sync
 
 from err import err
