@@ -1,10 +1,7 @@
 import os
 from hashlib import sha256
-from sqlalchemy import (Column, Integer, String, DateTime, Boolean,
-                        Enum, ForeignKey, Text, func, event, and_, or_, asc,
-                        desc)
-from sqlalchemy.orm import (relationship, deferred,
-                            validates, object_session)
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, ForeignKey
+from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.types import BLOB
 from sqlalchemy.sql.expression import true
 
@@ -204,4 +201,3 @@ class Account(MailSyncBase, HasPublicID):
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
                        'polymorphic_identity': 'account'}
-
