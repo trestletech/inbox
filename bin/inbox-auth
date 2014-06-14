@@ -12,7 +12,7 @@ from inbox.util.startup import preflight
 preflight()
 
 from inbox.util.url import NotSupportedError
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.auth.base import get_handler
 

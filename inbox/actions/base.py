@@ -27,7 +27,7 @@ from rq import Queue, Connection
 
 from inbox.util.misc import load_modules
 from inbox.util.concurrency import GeventWorker
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Account, SpoolMessage
 from inbox.config import config
 from inbox.sendmail.message import create_email, SenderInfo, Recipients

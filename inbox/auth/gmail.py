@@ -9,7 +9,7 @@ from imapclient import IMAPClient
 
 from inbox.auth.oauth import oauth_authorize
 from inbox.auth.base import verify_imap_account
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Namespace
 from inbox.models.backends.imap import ImapAccount
 from inbox.config import config

@@ -25,7 +25,7 @@ chunk_size = 500
 
 def upgrade():
     from inbox.sqlalchemy_ext.util import generate_public_id
-    from inbox.session import session_scope
+    from inbox.models.session import session_scope
 
     # These all inherit HasPublicID
     from inbox.models import (

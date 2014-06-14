@@ -43,7 +43,7 @@ from sqlalchemy import asc, func
 
 from inbox.util.concurrency import retry_wrapper
 from inbox.log import get_logger
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.api.kellogs import cereal
 from inbox.models import Transaction, Webhook, Lens
 

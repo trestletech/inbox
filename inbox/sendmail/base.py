@@ -5,7 +5,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
 from inbox.log import get_logger
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import (SpoolMessage, Thread, DraftThread,
                                              Account, Block)
 from inbox.models.util import get_or_copy_draft

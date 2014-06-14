@@ -104,7 +104,7 @@ def upgrade():
     op.create_foreign_key('imapuid_ibfk_3', 'imapuid', 'folder',
                           ['folder_id'], ['id'])
 
-    from inbox.session import session_scope
+    from inbox.models.session import session_scope
     from inbox.ignition import engine
 
     Base = declarative_base()

@@ -14,7 +14,7 @@ from inbox.models import (
 from inbox.api.kellogs import jsonify
 from inbox.config import config
 from inbox import contacts, sendmail
-from inbox.session import InboxSession, session_scope
+from inbox.models.session import InboxSession, session_scope
 from inbox.transactions import client_sync
 
 from err import err

@@ -10,8 +10,6 @@ from inbox.sqlalchemy_ext.util import LittleJSON
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.models.mixins import HasPublicID
-from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.account import Account
 from inbox.models.thread import Thread

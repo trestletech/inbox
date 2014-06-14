@@ -3,7 +3,7 @@ from collections import Counter
 
 import gevent
 
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Contact, Account
 from inbox.log import configure_contacts_logging, get_logger
 from inbox.contacts.google import GoogleContactsProvider

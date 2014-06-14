@@ -1,46 +1,52 @@
-import itertools
 import os
-import re
 import json
-
 from hashlib import sha256
-from datetime import datetime
-import bson
+from flanker import mime
 
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-                        Enum, ForeignKey, Text, func, event, and_, or_, asc,
-                        desc)
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
-                            validates, object_session)
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import BLOB
-from sqlalchemy.sql.expression import true, false
+from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
+                        Boolean, Enum, ForeignKey, Text)
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy.sql.expression import false
+
+from inbox.util.html import (plaintext2html, strip_tags,
+                             extract_from_html, extract_from_plain)
+from inbox.sqlalchemy_ext.util import JSON
+
+from inbox.config import config
+from inbox.util.addr import parse_email_address_list
+from inbox.util.file import mkdirp
+from inbox.util.misc import parse_ml_headers, parse_references
+
+from inbox.models.mixins import HasPublicID
+from inbox.models.transaction import HasRevisions
+from inbox.models.base import MailSyncBase
+
 
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.config import config
-from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.util.encoding import base36decode
-from inbox.util.file import Lock, mkdirp
-from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
-                             extract_from_plain)
-from inbox.util.misc import load_modules
-from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy_ext.util import (JSON, BigJSON, Base36UID,
-                                       maybe_refine_query)
-from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
-from inbox.basicauth import AUTH_TYPES
 
-from inbox.models.roles import Blob
-from inbox.models.mixins import HasPublicID
-from inbox.models.transaction import HasRevisions
-from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
-from inbox.models.transaction import HasRevisions
+def _trim_filename(s, max_len=64, log=None):
+    if s and len(s) > max_len:
+        if log:
+            log.warning(u"field is too long. Truncating to {}"
+                        u"characters. {}".format(max_len, s))
+        return s[:max_len - 8] + s[-8:]  # Keep extension
+    return s
+
+
+def _get_errfilename(account_id, folder_name, uid):
+    errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
+                          folder_name)
+    errfile = os.path.join(errdir, str(uid))
+    mkdirp(errdir)
+    return errfile
+
+def _log_decode_error(account_id, folder_name, uid, msg_string):
+    """ msg_string is in the original encoding pulled off the wire """
+    errfile = _get_errfilename(account_id, folder_name, uid)
+    with open(errfile, 'w') as fh:
+        fh.write(msg_string)
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
@@ -108,12 +114,169 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def namespace(self):
         return self.thread.namespace
 
+
+
+    def __init__(self, account=None, mid=None, folder_name=None,
+                 received_date=None, flags=None, body_string=None,
+                 *args, **kwargs):
+        """ Parses message data and writes out db metadata and MIME blocks.
+
+        Returns the new Message, which links to the new Block objects through
+        relationships. All new objects are uncommitted.
+
+        Threads are not computed here; you gotta do that separately.
+
+        Parameters
+        ----------
+        mid : int
+            The account backend-specific message identifier; it's only used for
+            logging errors.
+
+        raw_message : str
+            The full message including headers (encoded).
+        """
+
+        _rqd = [account, mid, folder_name, received_date, flags, body_string]
+        if any(_rqd) and not all([v != None for v in _rqd]):
+            raise ValueError(
+                "Required keyword arguments: account, mid, folder_name, "
+                "received_date, flags, body_string")
+
+        # trickle-down bugs
+        assert account.namespace is not None
+        assert not isinstance(body_string, unicode)
+
+        try:
+            parsed = mime.from_string(body_string)
+
+            mime_version = parsed.headers.get('Mime-Version')
+            # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
+            # .startswith
+            if mime_version is not None and not mime_version.startswith('1.0'):
+                log.error('Unexpected MIME-Version: {0}'.format(mime_version))
+
+            self.data_sha256 = sha256(body_string).hexdigest()
+
+            # clean_subject strips re:, fwd: etc.
+            self.subject = parsed.clean_subject
+            self.from_addr = parse_email_address_list(
+                parsed.headers.get('From'))
+            self.sender_addr = parse_email_address_list(
+                parsed.headers.get('Sender'))
+            self.reply_to = parse_email_address_list(
+                parsed.headers.get('Reply-To'))
+
+            self.to_addr = parse_email_address_list(parsed.headers.getall('To'))
+            self.cc_addr = parse_email_address_list(parsed.headers.getall('Cc'))
+            self.bcc_addr = parse_email_address_list(
+                parsed.headers.getall('Bcc'))
+
+            self.in_reply_to = parsed.headers.get('In-Reply-To')
+            self.message_id_header = parsed.headers.get('Message-Id')
+
+            self.received_date = received_date
+
+            # Optional mailing list headers
+            self.mailing_list_headers = parse_ml_headers(parsed.headers)
+
+            # Custom Inbox header
+            self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+
+            # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
+            self.references = parse_references(
+                parsed.headers.get('References', ''),
+                parsed.headers.get('In-Reply-To', ''))
+
+            self.size = len(body_string)  # includes headers text
+
+            i = 0  # for walk_index
+
+            from inbox.models.block import Part
+
+            # Store all message headers as object with index 0
+            headers_part = Part()
+            headers_part.namespace_id = account.namespace.id
+            headers_part.message = self
+            headers_part.walk_index = i
+            headers_part.data = json.dumps(parsed.headers.items())
+            self.parts.append(headers_part)
+
+            for mimepart in parsed.walk(
+                    with_self=parsed.content_type.is_singlepart()):
+                i += 1
+                if mimepart.content_type.is_multipart():
+                    log.warning("multipart sub-part found! on {}"
+                                .format(self.g_msgid))
+                    continue  # TODO should we store relations?
+
+                new_part = Part()
+                new_part.namespace_id = account.namespace.id
+                new_part.message = self
+                new_part.walk_index = i
+                new_part.misc_keyval = mimepart.headers.items()  # everything
+                new_part.content_type = mimepart.content_type.value
+                new_part.filename = _trim_filename(
+                    mimepart.content_type.params.get('name'),
+                    log=log)
+                # TODO maybe also trim other headers?
+
+                if mimepart.content_disposition[0] is not None:
+                    value, params = mimepart.content_disposition
+                    if value not in ['inline', 'attachment']:
+                        errmsg = """
+        Unknown Content-Disposition on message {0} found in {1}.
+        Bad Content-Disposition was: '{2}'
+        Parsed Content-Disposition was: '{3}'""".format(
+                            mid, folder_name, mimepart.content_disposition)
+                        log.error(errmsg)
+                        continue
+                    else:
+                        new_part.content_disposition = value
+                        if value == 'attachment':
+                            new_part.filename = _trim_filename(
+                                params.get('filename'),
+                                log=log)
+
+                if mimepart.body is None:
+                    data_to_write = ''
+                elif new_part.content_type.startswith('text'):
+                    data_to_write = mimepart.body.encode('utf-8', 'strict')
+                    # normalize mac/win/unix newlines
+                    data_to_write = data_to_write \
+                        .replace('\r\n', '\n').replace('\r', '\n')
+                else:
+                    data_to_write = mimepart.body
+                if data_to_write is None:
+                    data_to_write = ''
+
+                new_part.content_id = mimepart.headers.get('Content-Id')
+                new_part.data = data_to_write
+                self.parts.append(new_part)
+        except mime.DecodingError:
+            # occasionally iconv will fail via maximum recursion depth
+            _log_decode_error(account.id, folder_name, mid, body_string)
+            log.error('DecodeError, msg logged to {0}'.format(
+                _get_errfilename(account.id, folder_name, mid)))
+            return
+        except RuntimeError:
+            _log_decode_error(account.id, folder_name, mid, body_string)
+            log.error('RuntimeError<iconv> msg logged to {0}'.format(
+                _get_errfilename(account.id, folder_name, mid)))
+            return
+
+        self.calculate_sanitized_body()
+
+        MailSyncBase.__init__(self, *args, **kwargs)
+
+
+
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
-            stripped = extract_from_html(html_part.encode('utf-8')).decode('utf-8').strip()
+            stripped = extract_from_html(
+                html_part.encode('utf-8')).decode('utf-8').strip()
             self.sanitized_body = unicode(stripped)
             self.calculate_html_snippet(self.sanitized_body)
         elif plain_part:
@@ -272,7 +435,12 @@ class SpoolMessage(Message):
             'remote(SpoolMessage.deleted_at)==None)',
             uselist=False))
 
-
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
                        'inherit_condition': id == Message.id}
+
+
+    def __init__(self, *args, **kwargs):
+        SpoolMessage.__init__(self, *args, **kwargs)
+        if self.inbox_uid:
+            self.public_id = self.inbox_uid
 

@@ -8,7 +8,7 @@ import time
 import gdata.auth
 import gdata.contacts.client
 
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.imap import ImapAccount
 from inbox.auth.oauth import (GOOGLE_OAUTH_CLIENT_ID,

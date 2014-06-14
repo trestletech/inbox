@@ -64,7 +64,7 @@ def upgrade():
 
     op.drop_column('folder', u'exposed_name')
 
-    from inbox.session import session_scope
+    from inbox.models.session import session_scope
     # Doing this ties this migration to the state of the code at the time
     # of this commit. However, the alternative is to have a crazy long,
     # involved and error-prone recreation of the models and their behavior

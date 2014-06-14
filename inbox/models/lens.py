@@ -74,7 +74,7 @@ class Lens(MailSyncBase, HasPublicID):
 
     Examples
     --------
-    >>> from inbox.session import session_scope
+    >>> from inbox.models.session import session_scope
     >>> filter = Lens(namespace_id=1, subject='Welcome to Gmail')
     >>> with session_scope() as db_session:
     ...    msg_query = filter.message_query(db_session)

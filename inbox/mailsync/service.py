@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
-from inbox.session import session_scope
+from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.mailsync.backends.base import register_backends
 
