@@ -6,8 +6,7 @@ that we have previously cached.
 from flask import Flask, request, Response
 app = Flask(__name__)
 
-from util import resource_path_for_url
-from conftest import ALL_API_ENDPOINTS
+from util import resource_path_for_url, ALL_API_ENDPOINTS
 
 
 @app.route('/', defaults={'path': ''})
