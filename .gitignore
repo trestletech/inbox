@@ -15,6 +15,7 @@ node_modules
 /tests/coverage
 /cache
 /config.json
+/api_playback/data
 
 # location for editable pip installs
 /src

@@ -3,7 +3,7 @@ Inbox API Stub
 
 #### Update Mock Responses
 
-Running `py.test tests/api/ --bootstrap` will create a `data` directory with the cached responses from gunks. Subsequent runs of `py.test` will check against that.
+Running `./api_playback/bootstrap.py` will create a `data` directory with the cached responses from gunks. Subsequent runs of `py.test api_playback/test_api.py` will check against that.
 
 #### Serve Mock Responses
 

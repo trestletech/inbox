@@ -10,9 +10,6 @@ URL_PREFIX = 'https://gunks.inboxapp.com'
 RESOURCE_DIR = './data'
 
 
-def pytest_addoption(parser):
-    parser.addoption("--bootstrap", action="store_true", default=False,
-        help="Downloads the url endpoints to save for api testing.")
 
 
 ALL_API_ENDPOINTS = [
@@ -42,8 +39,8 @@ ALL_API_ENDPOINTS = [
 TEST_API_ENDPOINTS = [urljoin(URL_PREFIX, url) for url in ALL_API_ENDPOINTS]
 
 
-def cannonical_url(url):
-    # clean up to cannonical
+def canonical_url(url):
+    # clean up to canonical
     scheme, netloc, path, params, query, fragment = urlparse(url)
     query_sorted = sorted(parse_qs(query).items())  # just to be safe
 
@@ -75,7 +72,7 @@ def resource_base_path():
 
 
 def resource_path_for_url(url):
-    url = cannonical_url(url)
+    url = canonical_url(url)
     name = resource_name(url)
     return os.path.join(os.path.dirname(os.path.abspath(__file__)),
         RESOURCE_DIR, name)
