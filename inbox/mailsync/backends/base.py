@@ -5,11 +5,12 @@ from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError
 
+from inbox.log import get_logger
+logger = get_logger()
 from inbox.util.concurrency import retry_wrapper
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.config import config
-from inbox.log import configure_mailsync_logging
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
 import inbox.mailsync.backends
@@ -97,7 +98,7 @@ def save_folder_names(log, account, folder_names, db_session):
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
-    log.info("Folders were deleted from the remote: {}".format(folders.keys()))
+    log.info("folders deleted from remote", folders=folders.keys())
     for folder in folders.values():
         db_session.delete(folder)
         # TODO(emfree) delete associated tag
@@ -210,7 +211,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
-        self.log = configure_mailsync_logging(account_id)
+        self.log = logger.new(component='mail sync', account_id=account_id)
         self.account_id = account_id
         self.email_address = email_address
         self.provider = provider

@@ -98,7 +98,7 @@ def get_authenticated_user(authorization_code):
 def get_new_token(refresh_token):
     assert refresh_token is not None, 'refresh_token required'
 
-    log.info('Getting new oauth token...')
+    log.info('acquiring_new_oauth_token')
     args = {
         'refresh_token': refresh_token,
         'client_id': GOOGLE_OAUTH_CLIENT_ID,
@@ -119,7 +119,7 @@ def get_new_token(refresh_token):
     session_dict = response.json()
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
-            log.error('Refresh token is invalid.')
+            log.error('refresh_token_invalid')
             raise InvalidOAuthGrantError('Could not get new token')
         else:
             raise OAuthError(session_dict['error'])
@@ -135,7 +135,7 @@ def get_new_token(refresh_token):
 
 
 def validate_token(access_token):
-    log.info('Validating oauth token...')
+    log.info('validating_oauth_token')
     try:
         response = requests.get(OAUTH_TOKEN_VALIDATION_URL +
                                 '?access_token=' + access_token)
@@ -147,27 +147,31 @@ def validate_token(access_token):
 
     if 'error' in validation_dict:
         assert validation_dict['error'] == 'invalid_token'
-        log.error('{0} - {1}'.format(validation_dict['error'],
-                                     validation_dict['error_description']))
+        log.error('oauth_token_validation_failed',
+                  error=validation_dict['error'],
+                  error_description=validation_dict['error_description'])
         return None
 
     return validation_dict
 
 
 def user_info(access_token):
-    log.info('Fetching user info...')
+    log.info('fetching_user_info')
 
     try:
         response = requests.get(USER_INFO_URL +
                                 '?access_token=' + access_token)
     except Exception, e:
-        log.error(e)
+        log.error('user_info_fetch_failed', error=e)
         return None  # TODO better error handling here
 
     userinfo_dict = response.json()
 
     if 'error' in userinfo_dict:
         assert userinfo_dict['error'] == 'invalid_token'
+        log.error('user_info_fetch_failed',
+                  error=userinfo_dict['error'],
+                  error_description=userinfo_dict['error_description'])
         log.error('%s - %s' % (userinfo_dict['error'],
                                userinfo_dict['error_description']))
         return None

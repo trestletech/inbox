@@ -4,6 +4,7 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import os
 import argparse
+import platform
 
 from inbox.config import config
 
@@ -12,8 +13,8 @@ from inbox.util.startup import preflight
 from gevent import joinall
 from setproctitle import setproctitle; setproctitle('inbox')
 
-from inbox.log import configure_general_logging, get_logger
-
+from inbox.log import get_logger
+log = get_logger()
 
 parser = argparse.ArgumentParser(description='Inbox sync service')
 
@@ -30,8 +31,6 @@ if args.config:
     # TODO expand to full path
     load_overrides(config_path)
 
-configure_general_logging()
-log = get_logger()
 preflight()
 
 
@@ -53,7 +52,7 @@ def start():
     webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)
     threads.append(make_zerorpc(WebhookService, webhook_srv_loc))
 
-    print """
+    print >>sys.stderr, """
     \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
      |_   _|     | |
@@ -65,10 +64,11 @@ def start():
      Use CTRL-C to stop.
      """
 
-    log.info('Recursion limit: {0}'.format(sys.getrecursionlimit()))
-
-    log.info('Providers currently supported: '
-             '{0}'.format(', '.join(table_mod_for.keys())))
+    log.info('start',
+             components=['mail sync', 'webhooks', 'contact sync'],
+             host=platform.node(),
+             recursion_limit=sys.getrecursionlimit(),
+             supported_providers=table_mod_for.keys())
 
     # hang out forever and run some services
     joinall(threads)

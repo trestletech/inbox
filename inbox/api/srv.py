@@ -3,7 +3,7 @@ import logging
 from gevent.pywsgi import WSGIHandler
 
 from inbox.log import get_logger
-inbox_logger = get_logger(purpose='api')
+inbox_logger = get_logger()
 
 # Override default werkzeug before it starts up
 werkzeug_log = logging.getLogger('werkzeug')

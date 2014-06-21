@@ -8,7 +8,8 @@ import zerorpc
 from rq import Worker, Queue
 from rq.worker import StopRequested, DequeueTimeout
 
-from inbox.log import get_logger, log_uncaught_errors
+from inbox.log import get_logger
+from inbox.log import log_uncaught_errors
 log = get_logger()
 from inbox.mailsync.reporting import report_exit
 

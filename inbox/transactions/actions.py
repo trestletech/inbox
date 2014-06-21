@@ -68,7 +68,7 @@ class SyncbackService(gevent.Greenlet):
 
     def __init__(self, poll_interval=1, chunk_size=22, run_immediately=True):
 
-        self.log = get_logger(purpose='actions')
+        self.log = get_logger()
         self.actions = ActionRegistry()
         # Currently we're using the Redis queue and workers defined in
         # inbox.actions.base as an expedient way to distribute syncback

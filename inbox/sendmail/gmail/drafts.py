@@ -22,7 +22,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     This is a provider dependant function.
 
     """
-    log = get_logger(account.id, purpose='drafts')
+    log = get_logger()
 
     sender_info = SenderInfo(account.full_name, account.email_address)
     recipients = all_recipients(to_addr, cc_addr, bcc_addr)

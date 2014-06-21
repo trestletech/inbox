@@ -58,12 +58,12 @@ def verify_imap_account(db_session, account):
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
     if not is_valid:
-        log.error('Need to update access token!')
+        log.info('auth.access_token_requires_update', account=account.id,
+                 access_token=account.access_token)
+
+        log.info('auth.acquiring_new_access_token', account=account.id)
 
         refresh_token = account.refresh_token
-
-        log.error('Getting new access token...')
-
         try:
             response = get_new_token(refresh_token)
         # Redo the entire OAuth process.
@@ -81,7 +81,6 @@ def verify_imap_account(db_session, account):
 
         account = auth_handler.create_account(db_session,
                                               account.email_address, response)
-        log.info('Updated token for imap account {0}'.format(
-            account.email_address))
+        log.info('auth.access_token_updated', account=account.id)
 
     return account
