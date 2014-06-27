@@ -121,7 +121,9 @@ def finish(response):
         g.db_session.commit()
     g.db_session.close()
     if getattr(g, 'profiler', None) is not None:
+        response.content_type = 'text/html'
         g.profiler.stop()
+        response.data = g.profiler.output_html()
         print g.profiler.output_text(color=True)
 
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
