@@ -1,4 +1,5 @@
 import os
+import logging
 
 import zerorpc
 from flask import request, g, Blueprint, make_response, current_app, Response
@@ -103,12 +104,27 @@ def start():
     except ValueError as e:
         return err(400, e.message)
 
+    if request.args.get('echo') == 'true':
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+    if request.args.get('profile') == 'true':
+        from pyinstrument import Profiler
+        g.profiler = Profiler()
+        g.profiler.start()
+    else:
+        g.profiler = None
+
 
 @app.after_request
 def finish(response):
     if response.status_code == 200:
         g.db_session.commit()
     g.db_session.close()
+    if getattr(g, 'profiler', None) is not None:
+        g.profiler.stop()
+        print g.profiler.output_text(color=True)
+
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
     return response
 
 
