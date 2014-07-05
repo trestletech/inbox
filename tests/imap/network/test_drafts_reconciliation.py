@@ -39,7 +39,7 @@ def message(db, config):
 def test_create_reconcile(db, config, message, sync_client):
     """ Tests the save_draft function, which saves the draft to the remote. """
     from inbox.sendmail.base import create_draft
-    from inbox.actions.gmail import remote_save_draft
+    from inbox.actions.backends.gmail import remote_save_draft
     from inbox.sendmail.base import _parse_recipients, Recipients
     from inbox.sendmail.message import create_email
     from inbox.models.tables.base import Message, SpoolMessage
