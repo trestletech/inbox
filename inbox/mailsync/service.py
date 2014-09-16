@@ -31,7 +31,7 @@ class SyncService(Process):
     poll_interval : int
         Seconds between polls for account changes.
     """
-    def __init__(self, cpu_id, total_cpus, poll_interval=1):
+    def __init__(self, cpu_id, total_cpus, poll_interval=120):
         self.cpu_id = cpu_id
         self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(

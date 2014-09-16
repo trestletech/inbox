@@ -157,5 +157,15 @@ providers = {
                        "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u0435": "sent",
                        "\u041a\u043e\u0440\u0437\u0438\u043d\u0430": "trash"},
         "domains": ["mail.ru"]
+    },
+    "dreamhost": {
+        "type": "generic",
+        "imap": "homie.mail.dreamhost.com",
+        "smtp": "homie.mail.dreamhost.com:587",        
+        "auth": "password",
+        "folder_map": {"INBOX": "inbox", "INBOX.old-messages": "archive",
+                       "INBOX.Drafts": "drafts", "INBOX.Junk": "spam",
+                       "INBOX.Sent": "sent", "INBOX.Trash": "trash"},
+        "domains": ["jdadesign.net", "trestletechnology.net"]
     }
 }
